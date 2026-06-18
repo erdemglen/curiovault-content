@@ -1,0 +1,64 @@
+{
+  "verified": true,
+  "generatedAt": "2026-06-18T15:11:59.098Z",
+  "round": {
+    "dayNumber": 20622,
+    "theme": "The Human Body",
+    "statements": [
+      {
+        "id": 1,
+        "key": "adult-human-bones-count",
+        "text": "An adult human skeleton typically contains 206 bones, fewer than the roughly 300 bones a newborn has, because many bones fuse during growth.",
+        "truth": "real",
+        "rarity": "common",
+        "source": {
+          "publication": "Cleveland Clinic",
+          "url": "https://my.clevelandclinic.org/health/body/21048-skeletal-system"
+        },
+        "constellation": "skeletal-system"
+      },
+      {
+        "id": 2,
+        "key": "stomach-acid-replaces-lining",
+        "text": "The human stomach generates a new mucous lining roughly every two weeks to keep its own acid, which is strong enough to dissolve metal, from digesting the stomach itself.",
+        "truth": "fabricated",
+        "rarity": "common",
+        "source": null,
+        "constellation": "digestive-system"
+      },
+      {
+        "id": 3,
+        "key": "small-intestine-length",
+        "text": "The small intestine is about 6 meters (roughly 20 feet) long, making it the longest section of the gastrointestinal tract.",
+        "truth": "real",
+        "rarity": "common",
+        "source": {
+          "publication": "National Cancer Institute (SEER Training)",
+          "url": "https://training.seer.cancer.gov/anatomy/digestive/regions/intestine.html"
+        },
+        "constellation": "digestive-system"
+      },
+      {
+        "id": 4,
+        "key": "heart-beats-per-day",
+        "text": "A human heart beats about 100,000 times per day, pumping roughly 7,500 liters of blood through the body in that time.",
+        "truth": "real",
+        "rarity": "common",
+        "source": {
+          "publication": "American Heart Association",
+          "url": "https://www.heart.org/en/health-topics/how-the-heart-works"
+        },
+        "constellation": "cardiovascular-system"
+      },
+      {
+        "id": 5,
+        "key": "liver-regenerates-overnight",
+        "text": "The human liver can fully regenerate from as little as 10% of its original mass in a single night, the only organ capable of complete overnight regrowth.",
+        "truth": "fabricated",
+        "rarity": "rare",
+        "source": null,
+        "constellation": "digestive-system"
+      }
+    ]
+  }
+}
