@@ -1,0 +1,45 @@
+name: Daily Content
+
+# Lives in the PUBLIC content repo (e.g. curiovault-content). The private app
+# repo stays private; only the generated daily facts (public anyway) live here.
+# Served free via the jsDelivr CDN — no GitHub Pages needed.
+
+on:
+  schedule:
+    - cron: "0 5 * * *"   # 05:00 UTC daily — tune as you grow
+  workflow_dispatch: {}    # manual trigger from the Actions tab
+
+permissions:
+  contents: write          # commit the generated payload (git = audit trail)
+
+concurrency:
+  group: daily-content
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Generate + verify today's Daily Five
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node scripts/generate-daily.mjs
+
+      - name: Commit payload (audit trail)
+        run: |
+          git config user.name "curiovault-bot"
+          git config user.email "bot@curiovault.app"
+          git add content/daily
+          git commit -m "content: daily payload $(date -u +%F)" || { echo "no changes"; exit 0; }
+          git push
+
+      - name: Purge jsDelivr CDN cache
+        run: |
+          curl -s "https://purge.jsdelivr.net/gh/${{ github.repository }}@main/content/daily/latest.json" || true
+          echo "purged"
