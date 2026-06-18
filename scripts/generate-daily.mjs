@@ -58,17 +58,54 @@ async function generate(theme, dayNumber) {
     maxTokens: 2000,
     system:
       "You author 'The Daily Five' for a knowledge game. Produce exactly 5 statements on the theme: " +
-      "3 REAL (each with a real, citable reputable source URL) and 2 FABRICATED (plausible but false). " +
-      "Assign rarity by how surprising/obscure a real fact is (common/rare/legendary). " +
+      "3 REAL (each with a real, citable reputable source) and 2 FABRICATED (plausible but false). " +
+      "Use lowercase for `truth` (\"real\"|\"fabricated\") and `rarity` (\"common\"|\"rare\"|\"legendary\"). " +
+      "`source` MUST be an object {\"publication\":\"NASA\",\"url\":\"https://...\"} for real statements, and null for fabricated ones. " +
       "Give each a stable kebab-case `key` and optional `constellation` id. " +
       "Respond ONLY with JSON: {dayNumber, theme, statements:[{id,key,text,truth,rarity,source,constellation}]}.",
     user: `Theme: ${theme}. dayNumber: ${dayNumber}.`,
   });
-  return extractJSON(text);
+  return normalize(extractJSON(text), theme, dayNumber);
+}
+
+// Coerce model output into the exact shape the Swift app decodes, regardless of
+// how the model formatted it (uppercase enums, string-vs-object source, etc.).
+function normalize(round, theme, dayNumber) {
+  round.theme ??= theme;
+  round.dayNumber ??= dayNumber;
+  round.statements = (round.statements ?? []).map((s, i) => {
+    const truth = String(s.truth ?? "").toLowerCase().startsWith("fab") ? "fabricated" : "real";
+    let source = s.source ?? null;
+    if (typeof source === "string") {
+      source = source.trim() ? { publication: hostOf(source), url: source } : null;
+    } else if (source && typeof source === "object" && !source.url) {
+      source = null;
+    }
+    if (truth === "fabricated") source = null; // fakes never carry a source
+    return {
+      id: s.id ?? i + 1,
+      key: s.key ?? `stmt-${i + 1}`,
+      text: s.text ?? "",
+      truth,
+      rarity: String(s.rarity ?? "common").toLowerCase(),
+      source,
+      constellation: s.constellation ?? null,
+    };
+  });
+  return round;
+}
+
+function hostOf(url) {
+  try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return "source"; }
 }
 
 async function urlResolves(url) {
-  try { return (await fetch(url, { method: "HEAD" })).ok; } catch { return false; }
+  const ua = { headers: { "user-agent": "Mozilla/5.0 (compatible; CurioVaultBot/1.0)" } };
+  try {
+    let r = await fetch(url, { method: "HEAD", redirect: "follow", ...ua });
+    if (r.status === 405 || r.status === 403) r = await fetch(url, { redirect: "follow", ...ua });
+    return r.status < 400;
+  } catch { return false; }
 }
 
 async function confirmsClaim(s) {
@@ -88,10 +125,15 @@ async function verifyAll(round) {
   for (const s of round.statements) {
     let pass;
     if (s.truth === "real") {
-      const resolves = s.source?.url ? await urlResolves(s.source.url) : false;
+      // Hard gate: must cite a source AND pass the fact-check. URL HTTP-resolution
+      // is logged but NOT a hard gate — many reputable sites block bot requests,
+      // which would wrongly reject good facts.
+      const hasSource = Boolean(s.source?.url);
       const confirmed = await confirmsClaim(s);
-      pass = resolves && confirmed;
-      perStatement.push({ key: s.key, truth: s.truth, verdict: confirmed ? "YES" : "NO", source: s.source?.url ?? null });
+      const resolves = hasSource ? await urlResolves(s.source.url) : false;
+      pass = hasSource && confirmed;
+      perStatement.push({ key: s.key, truth: s.truth, verdict: confirmed ? "YES" : "NO",
+                          source: s.source?.url ?? null, resolves });
     } else {
       const accidentallyTrue = await confirmsClaim({ ...s, truth: "real" });
       pass = !accidentallyTrue;
