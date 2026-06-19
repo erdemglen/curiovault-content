@@ -15,6 +15,17 @@ import { dirname, join } from "node:path";
 const MODEL = "claude-opus-4-8";
 const API = "https://api.anthropic.com/v1/messages";
 const KEY = process.env.ANTHROPIC_API_KEY;
+
+// Canonical constellation ids — keep in sync with the client's Constellations.all
+// and the Worker's CONSTELLATION_IDS. Generators may only use these (or null).
+const CONSTELLATION_IDS = [
+  "human-machine", "strange-creatures", "sonic-universe", "silicon-minds", "pixel-legends",
+  "pale-blue-dot", "human-limits", "edible-alchemy", "digital-dawn", "ancient-engineers",
+  "word-worlds", "warming-world", "terra-incognita", "quantum-realm", "miracle-cures",
+  "inner-cosmos", "dream-atlas", "digital-gold", "cosmic-extremes", "hidden-waters",
+  "extremes-of-earth", "cartographers-secrets",
+];
+const CONSTELLATION_SET = new Set(CONSTELLATION_IDS);
 const here = dirname(fileURLToPath(import.meta.url));
 const outDir = join(here, "..", "content", "daily");
 
@@ -61,7 +72,9 @@ async function generate(theme, dayNumber) {
       "3 REAL (each with a real, citable reputable source) and 2 FABRICATED (plausible but false). " +
       "Use lowercase for `truth` (\"real\"|\"fabricated\") and `rarity` (\"common\"|\"rare\"|\"legendary\"). " +
       "`source` MUST be an object {\"publication\":\"NASA\",\"url\":\"https://...\"} for real statements, and null for fabricated ones. " +
-      "Give each a stable kebab-case `key` and optional `constellation` id. " +
+      "Give each a stable kebab-case `key`. " +
+      "`constellation` MUST be one of these ids (pick the best thematic fit) or null: " +
+      CONSTELLATION_IDS.join(", ") + ". " +
       "Respond ONLY with JSON: {dayNumber, theme, statements:[{id,key,text,truth,rarity,source,constellation}]}.",
     user: `Theme: ${theme}. dayNumber: ${dayNumber}.`,
   });
@@ -89,7 +102,8 @@ function normalize(round, theme, dayNumber) {
       truth,
       rarity: String(s.rarity ?? "common").toLowerCase(),
       source,
-      constellation: s.constellation ?? null,
+      // Only allow canonical constellation ids through — drop anything off-list.
+      constellation: CONSTELLATION_SET.has(s.constellation) ? s.constellation : null,
     };
   });
   return round;
