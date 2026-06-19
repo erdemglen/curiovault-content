@@ -96,7 +96,7 @@ function normalize(round, theme, dayNumber) {
     }
     if (truth === "fabricated") source = null; // fakes never carry a source
     return {
-      id: s.id ?? i + 1,
+      id: Number(s.id) || i + 1,
       key: s.key ?? `stmt-${i + 1}`,
       text: s.text ?? "",
       truth,
