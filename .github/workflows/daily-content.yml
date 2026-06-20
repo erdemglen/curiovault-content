@@ -35,7 +35,7 @@ jobs:
         run: |
           git config user.name "curiovault-bot"
           git config user.email "bot@curiovault.app"
-          git add content/daily
+          git add -f content/daily
           git commit -m "content: daily payload $(date -u +%F)" || { echo "no changes"; exit 0; }
           git push
 
