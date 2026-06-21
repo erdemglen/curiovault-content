@@ -5,13 +5,9 @@ name: Daily Content
 # Served free via the jsDelivr CDN — no GitHub Pages needed.
 
 on:
-  schedule:
-    # Several attempts — GitHub cron is best-effort and can be delayed/skipped.
-    # The idempotency guard below means only the first successful run each day
-    # actually generates; the rest are no-ops (recovery for missed slots).
-    - cron: "0 5 * * *"
-    - cron: "30 7 * * *"
-    - cron: "30 10 * * *"
+  # Daily generation now runs on the Cloudflare Worker cron (reliable timing,
+  # served from D1 via /v1/daily). This workflow is kept for manual/backup use
+  # only — the scheduled triggers are disabled to avoid redundant generation.
   workflow_dispatch: {}    # manual trigger from the Actions tab
 
 permissions:
