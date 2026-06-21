@@ -6,7 +6,12 @@ name: Daily Content
 
 on:
   schedule:
-    - cron: "0 5 * * *"   # 05:00 UTC daily — tune as you grow
+    # Several attempts — GitHub cron is best-effort and can be delayed/skipped.
+    # The idempotency guard below means only the first successful run each day
+    # actually generates; the rest are no-ops (recovery for missed slots).
+    - cron: "0 5 * * *"
+    - cron: "30 7 * * *"
+    - cron: "30 10 * * *"
   workflow_dispatch: {}    # manual trigger from the Actions tab
 
 permissions:
@@ -26,12 +31,26 @@ jobs:
         with:
           node-version: "22"
 
+      # Skip if today's content already exists (so the extra cron slots are
+      # safe no-ops and content never regenerates/changes mid-day).
+      - name: Skip if today already generated
+        id: guard
+        run: |
+          if [ -f "content/daily/$(date -u +%F).json" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Today's content already exists — skipping."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Generate + verify today's Daily Five
+        if: steps.guard.outputs.exists == 'false'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: node scripts/generate-daily.mjs
 
       - name: Commit payload (audit trail)
+        if: steps.guard.outputs.exists == 'false'
         run: |
           git config user.name "curiovault-bot"
           git config user.email "bot@curiovault.app"
@@ -40,6 +59,9 @@ jobs:
           git push
 
       - name: Purge jsDelivr CDN cache
+        if: steps.guard.outputs.exists == 'false'
         run: |
+          DAY=$(date -u +%F)
           curl -s "https://purge.jsdelivr.net/gh/${{ github.repository }}@main/content/daily/latest.json" || true
+          curl -s "https://purge.jsdelivr.net/gh/${{ github.repository }}@main/content/daily/$DAY.json" || true
           echo "purged"
